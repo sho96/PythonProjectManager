@@ -72,12 +72,30 @@ try {
     Exec "python -m pip install --upgrade build twine"
     Exec "python -m build"
 
+    # Ensure branch exists locally; fall back to current branch if not
+    & git show-ref --verify --quiet "refs/heads/$Branch" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        $currentBranch = (git rev-parse --abbrev-ref HEAD)
+        Write-Host "Branch '$Branch' not found locally; using current branch '$currentBranch' instead."
+        $Branch = $currentBranch
+    }
+
     # Push branch
     Exec "git push origin $Branch"
 
-    # Create annotated tag and push it
-    Exec "git tag -a $Tag -m \"$Message\""
-    Exec "git push origin $Tag"
+    # Create annotated tag and push it (handle existing tags when -Force)
+    & git rev-parse -q --verify "refs/tags/$Tag" > $null 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        if ($Force) {
+            Exec "git tag -f -a $Tag -m \"$Message\""
+            Exec "git push -f origin $Tag"
+        } else {
+            throw "Tag $Tag already exists locally. Use -Force to overwrite."
+        }
+    } else {
+        Exec "git tag -a $Tag -m \"$Message\""
+        Exec "git push origin $Tag"
+    }
 
     # Upload to PyPI using twine and PYPI_API_TOKEN
     if (-not $env:PYPI_API_TOKEN) {
