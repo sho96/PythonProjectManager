@@ -1,2 +1,0 @@
-rm dist/*.whl ; python -m build --wheel 2>&1 | grep -E "(Successfully|ERROR|Traceback)" ; echo "---" ; ls dist/*.whl
-git add . ; git commit -m "update" ; git tag -d v0.1.0 ; git tag v0.1.0 ; git push --force origin v0.1.0
