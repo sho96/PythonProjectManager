@@ -10,10 +10,10 @@ class InterpretersData:
     FILE_PATH: str
     
     interpreters: list[str] | None = None
-    global_interpreter: str | None = None
+    default_interpreter: str | None = None
     
     def is_empty(self) -> bool:
-        return self.interpreters is None and self.global_interpreter is None
+        return self.interpreters is None and self.default_interpreter is None
     
     def save(self) -> None:
         SAVE_PATH = os.path.join(DATA_DIR, self.FILE_PATH)
@@ -29,22 +29,22 @@ class InterpretersData:
             with open(LOAD_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self.interpreters = data.get("interpreters")
-                self.global_interpreter = data.get("global_interpreter")
+                self.default_interpreter = data.get("default_interpreter")
         else:
             self.interpreters = None
-            self.global_interpreter = None
+            self.default_interpreter = None
 
-        # If no global interpreter configured, default to current Python executable
+        # If no default interpreter configured, default to current Python executable
         try:
             current = sys.executable
-            if not self.global_interpreter and current and os.path.isfile(current):
+            if not self.default_interpreter and current and os.path.isfile(current):
                 # ensure interpreters list exists and contains the current executable
                 if self.interpreters is None:
                     self.interpreters = [current]
                 else:
                     if current not in self.interpreters:
                         self.interpreters.insert(0, current)
-                self.global_interpreter = current
+                self.default_interpreter = current
                 # persist the change
                 self.save()
         except Exception:

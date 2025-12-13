@@ -5,8 +5,15 @@ import json
 import importlib.resources as pkg_resources
 import subprocess
 from pathlib import Path
+import colorama
+from colorama import Fore, Style
 
-from .create_venv import create_venv, install_packages_in_venv
+colorama.init(autoreset=True)
+
+def cprint(msg: str, color: str = Fore.WHITE) -> None:
+    print(f"{color}{msg}{Style.RESET_ALL}")
+
+from .create_venv import create_venv, install_packages_in_venv, install_packages
 from .handle_data import interpreters_data
 
 
@@ -19,18 +26,34 @@ def cmd_add_interpreter(args):
         return
     interpreters_data.interpreters.append(path)
     interpreters_data.save()
-    print(f"Added interpreter: {path}")
+    cprint(f"Added interpreter: {path}", Fore.GREEN)
+
+
+def cmd_set_default_interpreter(args):
+    path = args.path
+    if not os.path.isfile(path):
+        print(f"Interpreter not found: {path}")
+        return 2
+    interpreters_data.default_interpreter = path
+    # ensure it's in the interpreters list as well
+    if interpreters_data.interpreters is None:
+        interpreters_data.interpreters = [path]
+    elif path not in interpreters_data.interpreters:
+        interpreters_data.interpreters.insert(0, path)
+    interpreters_data.save()
+    print(f"Set default interpreter: {path}")
+    return 0
 
 
 def cmd_list(args):
-    print("Interpreters:")
+    cprint("Interpreters:", Fore.CYAN)
     if interpreters_data.interpreters:
         for p in interpreters_data.interpreters:
             print(f" - {p}")
     else:
-        print(" - (none)")
-    print("Global interpreter:")
-    print(f" - {interpreters_data.global_interpreter}")
+        cprint(" - (none)", Fore.YELLOW)
+    cprint("Default interpreter:", Fore.CYAN)
+    print(f" - {interpreters_data.default_interpreter}")
 
 
 def load_templates():
@@ -239,7 +262,7 @@ def _get_python_version(python_exe: str) -> str | None:
 def cmd_create(args):
     interpreter = args.interpreter
     if not interpreter:
-        interpreter = interpreters_data.global_interpreter
+        interpreter = interpreters_data.default_interpreter
         if not interpreter and interpreters_data.interpreters:
             interpreter = interpreters_data.interpreters[0]
     venv_dir = args.venv_dir
@@ -257,33 +280,33 @@ def cmd_create_from_template(args):
     data = load_templates()
     templates = data.get("templates", {})
     if template not in templates:
-        print(f"Template '{template}' not defined. Available: {', '.join(templates.keys())}")
+        cprint(f"Template '{template}' not defined. Available: {', '.join(templates.keys())}", Fore.RED)
         return 2
 
     packages = templates[template]
 
     # determine interpreter to use
     if not interpreter:
-        interpreter = interpreters_data.global_interpreter
+        interpreter = interpreters_data.default_interpreter
         if not interpreter and interpreters_data.interpreters:
             interpreter = interpreters_data.interpreters[0]
 
     if not interpreter:
-        print("No interpreter specified and no interpreter configured in .pynstal.")
+        cprint("No interpreter specified and no interpreter configured in .pynstal.", Fore.RED)
         return 2
 
     # create venv
     created = create_venv(interpreter, venv_dir, dry_run=dry_run)
     if not created:
-        print("Failed to create venv; aborting package installation.")
+        cprint("Failed to create venv; aborting package installation.", Fore.RED)
         return 1
 
     ok, out, err = install_packages_in_venv(venv_dir, packages, dry_run=dry_run)
     if ok:
-        print("Packages installed successfully." if not dry_run else out)
+        cprint("Packages installed successfully." if not dry_run else out, Fore.GREEN)
         return 0
     else:
-        print(f"Failed installing packages. Error:\n{err}")
+        cprint(f"Failed installing packages. Error:\n{err}", Fore.RED)
         return 1
 
 
@@ -314,14 +337,14 @@ def cmd_template_add(args):
     templates = data.get("templates", {})
 
     if name in templates:
-        print(f"Template '{name}' already exists.")
+        cprint(f"Template '{name}' already exists.", Fore.YELLOW)
         return 2
 
     # Simple packages as a list
     templates[name] = packages_str.split()
     data["templates"] = templates
     save_templates(data)
-    print(f"Template '{name}' added with packages: {', '.join(packages_str.split())}")
+    cprint(f"Template '{name}' added with packages: {', '.join(packages_str.split())}", Fore.GREEN)
     return 0
 
 
@@ -338,7 +361,7 @@ def cmd_template_add_complex(args):
     templates = data.get("templates", {})
 
     if name in templates:
-        print(f"Template '{name}' already exists.")
+        cprint(f"Template '{name}' already exists.", Fore.YELLOW)
         return 2
 
     # Create dict entry with packages and args
@@ -348,9 +371,9 @@ def cmd_template_add_complex(args):
     }
     data["templates"] = templates
     save_templates(data)
-    print(f"Template '{name}' added with packages: {', '.join(packages)}")
+    cprint(f"Template '{name}' added with packages: {', '.join(packages)}", Fore.GREEN)
     if pip_args:
-        print(f"  Install args: {' '.join(pip_args)}")
+        cprint(f"  Install args: {' '.join(pip_args)}", Fore.CYAN)
     return 0
 
 
@@ -366,13 +389,13 @@ def cmd_template_remove(args):
     templates = data.get("templates", {})
 
     if name not in templates:
-        print(f"Template '{name}' not found.")
+        cprint(f"Template '{name}' not found.", Fore.YELLOW)
         return 2
 
     del templates[name]
     data["templates"] = templates
     save_templates(data)
-    print(f"Template '{name}' removed.")
+    cprint(f"Template '{name}' removed.", Fore.GREEN)
     return 0
 
 
@@ -382,11 +405,11 @@ def cmd_template_show(args):
     templates = data.get("templates", {})
 
     if name not in templates:
-        print(f"Template '{name}' not found.")
+        cprint(f"Template '{name}' not found.", Fore.YELLOW)
         return 2
 
     packages = templates[name]
-    print(f"Template '{name}':")
+    cprint(f"Template '{name}':", Fore.CYAN)
     if isinstance(packages, list):
         for pkg in packages:
             if isinstance(pkg, str):
@@ -398,14 +421,14 @@ def cmd_template_show(args):
 
 def cmd_interpreter_detect(args):
     """Detect Python installations on the system."""
-    print("Scanning for Python installations...")
+    cprint("Scanning for Python installations...", Fore.CYAN)
     found = detect_interpreters(verbose=False)
     
     if not found:
-        print("No Python installations found.")
+        cprint("No Python installations found.", Fore.YELLOW)
         return 1
     
-    print(f"\nFound {len(found)} Python installation(s):\n")
+    cprint(f"\nFound {len(found)} Python installation(s):\n", Fore.CYAN)
     for idx, item in enumerate(found, 1):
         print(f"  [{idx}] {item['path']}")
         print(f"      Version: {item['version']}")
@@ -459,6 +482,40 @@ def cmd_interpreter_detect(args):
         return 0
 
 
+def cmd_install(args):
+    """Install packages from a template into the current or specified interpreter."""
+    template = args.template
+    dry_run = args.dry_run
+    interpreter = args.interpreter
+
+    data = load_templates()
+    templates = data.get("templates", {})
+    if template not in templates:
+        print(f"Template '{template}' not defined. Available: {', '.join(templates.keys())}")
+        return 2
+
+    packages = templates[template]
+
+    # Determine interpreter to use
+    if not interpreter:
+        interpreter = interpreters_data.default_interpreter
+        if not interpreter:
+            interpreter = sys.executable
+
+    if not interpreter:
+        print("No interpreter specified and no default interpreter configured in .pynstal.")
+        return 2
+
+    # Install packages into the specified interpreter
+    ok, out, err = install_packages(interpreter, packages, dry_run=dry_run)
+    if ok:
+        print("Packages installed successfully." if not dry_run else out)
+        return 0
+    else:
+        print(f"Failed installing packages. Error:\n{err}")
+        return 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="pynstal")
     sub = parser.add_subparsers(dest="cmd")
@@ -466,6 +523,10 @@ def main(argv=None):
     a_add = sub.add_parser("add-interpreter", help="Add interpreter path to data/interpreters.json")
     a_add.add_argument("path", help="Path to python interpreter executable")
     a_add.set_defaults(func=cmd_add_interpreter)
+
+    a_set_default = sub.add_parser("set-default-interpreter", help="Set the default interpreter for the project")
+    a_set_default.add_argument("path", help="Path to python interpreter executable")
+    a_set_default.set_defaults(func=cmd_set_default_interpreter)
 
     a_list = sub.add_parser("list", help="List configured interpreters")
     a_list.set_defaults(func=cmd_list)
@@ -479,8 +540,8 @@ def main(argv=None):
     a_detect_detect.set_defaults(func=cmd_interpreter_detect)
 
     a_create = sub.add_parser("create-venv", help="Create virtualenv using specified interpreter")
-    a_create.add_argument("interpreter", help="Interpreter path to use")
     a_create.add_argument("venv_dir", help="Directory to create venv in")
+    a_create.add_argument("--interpreter", help="Interpreter path to use")
     a_create.add_argument("--dry-run", action="store_true", help="Do not actually run venv creation; show command")
     a_create.set_defaults(func=cmd_create)
 
@@ -490,6 +551,12 @@ def main(argv=None):
     a_tpl.add_argument("--interpreter", help="Interpreter path to use (overrides data)")
     a_tpl.add_argument("--dry-run", action="store_true", help="Do not actually run commands; show what would run")
     a_tpl.set_defaults(func=cmd_create_from_template)
+
+    a_install = sub.add_parser("install", help="Install packages from a template (without creating venv)")
+    a_install.add_argument("template", help="Template name")
+    a_install.add_argument("--interpreter", help="Interpreter path to use (defaults to default_interpreter or current Python)")
+    a_install.add_argument("--dry-run", action="store_true", help="Do not actually run commands; show what would run")
+    a_install.set_defaults(func=cmd_install)
 
     # Template management subcommands
     a_tm = sub.add_parser("template", help="Manage templates")

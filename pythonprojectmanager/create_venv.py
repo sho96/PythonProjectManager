@@ -2,6 +2,13 @@ from .handle_data import interpreters_data
 import os
 import subprocess
 import sys
+import colorama
+from colorama import Fore, Style
+
+colorama.init(autoreset=True)
+
+def cprint(msg: str, color: str = Fore.WHITE) -> None:
+    print(f"{color}{msg}{Style.RESET_ALL}")
 
 def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
     abs_interpreter = os.path.abspath(interpreter_path)
@@ -12,16 +19,35 @@ def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
         stdout = f"DRY RUN: would run: {cmd}"
         return True, stdout, ""
 
+    
+    cprint(f"Running command: {' '.join(cmd)}", Fore.CYAN)
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True,
+        stderr=subprocess.STDOUT,
+        shell=False,
         universal_newlines=True,
     )
 
-    stdout, stderr = process.communicate()
-    return process.returncode == 0, stdout, stderr
+    out_lines = []
+    try:
+        if process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                if line is None:
+                    break
+                line = line.rstrip('\n')
+                out_lines.append(line)
+                print(line)
+            process.stdout.close()
+        returncode = process.wait()
+        stdout = "\n".join(out_lines)
+        return returncode == 0, stdout, ""
+    except Exception as e:
+        try:
+            process.kill()
+        except Exception:
+            pass
+        return False, "", str(e)
 
 
 def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
@@ -33,9 +59,9 @@ def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
         if dry_run:
             print(stdout)
             return True
-        print(f"Virtual environment created successfully at {venv_dir}.")
+        cprint(f"Virtual environment created successfully at {venv_dir}.", Fore.GREEN)
 
-        # Configure the newly-created venv as the project's global interpreter
+        # Configure the newly-created venv as the project's default interpreter
         try:
             if sys.platform.startswith("win"):
                 venv_python = os.path.join(venv_dir, "Scripts", "python.exe")
@@ -51,15 +77,15 @@ def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
                     if venv_python not in interpreters_data.interpreters:
                         interpreters_data.interpreters.insert(0, venv_python)
 
-                interpreters_data.global_interpreter = venv_python
+                interpreters_data.default_interpreter = venv_python
                 interpreters_data.save()
-                print(f"Configured project global interpreter: {venv_python}")
+                cprint(f"Configured project default interpreter: {venv_python}", Fore.GREEN)
         except Exception:
             pass
 
         return True
     else:
-        print(f"Failed to create virtual environment. Error:\n{stderr}")
+        cprint(f"Failed to create virtual environment. Error:\n{stderr}", Fore.RED)
         return False
 
 
@@ -77,6 +103,19 @@ def install_packages_in_venv(venv_dir: str, packages: list, dry_run: bool = Fals
     else:
         py_exe = os.path.join(venv_dir, "bin", "python")
 
+    return install_packages(py_exe, packages, dry_run=dry_run)
+   
+def install_packages(interpreter: str, packages: list, dry_run: bool = False):
+    """Install packages using the specified interpreter's pip.
+
+    Each entry in `packages` may be either:
+      - a simple string: "numpy"
+      - a dict: {"packages": ["torch","torchvision"], "args": ["--index-url", "https://download.pytorch.org/whl/cu130"]}
+
+    Returns (success: bool, stdout: str, stderr: str).
+    """
+    abs_interpreter = os.path.abspath(interpreter)
+
     all_stdout = []
     all_stderr = []
 
@@ -93,25 +132,43 @@ def install_packages_in_venv(venv_dir: str, packages: list, dry_run: bool = Fals
             # unsupported type; skip
             continue
 
-        cmd = [os.path.abspath(py_exe), "-m", "pip", "install"] + pkg_list + extra_args
+        cmd = [abs_interpreter, "-m", "pip", "install"] + pkg_list + extra_args
         if dry_run:
             all_stdout.append(f"DRY RUN: would run: {cmd}")
             continue
 
-        if not os.path.exists(py_exe):
-            return False, "", f"Python executable not found in venv: {py_exe}"
+        if not os.path.exists(abs_interpreter):
+            return False, "", f"Interpreter executable not found: {abs_interpreter}"
 
+        print(f"Running command: {' '.join(cmd)}")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
+            stderr=subprocess.STDOUT,
+            shell=False,
             universal_newlines=True,
         )
-        stdout, stderr = process.communicate()
-        all_stdout.append(stdout)
-        all_stderr.append(stderr)
-        if process.returncode != 0:
-            return False, "\n".join(all_stdout), "\n".join(all_stderr)
+
+        pkg_out = []
+        try:
+            if process.stdout:
+                for line in iter(process.stdout.readline, ''):
+                    if line is None:
+                        break
+                    line = line.rstrip('\n')
+                    pkg_out.append(line)
+                    print(line)
+                process.stdout.close()
+            rc = process.wait()
+            all_stdout.append("\n".join(pkg_out))
+            if rc != 0:
+                all_stderr.append(f"Command exited with {rc}")
+                return False, "\n".join(all_stdout), "\n".join(all_stderr)
+        except Exception as e:
+            try:
+                process.kill()
+            except Exception:
+                pass
+            return False, "\n".join(all_stdout), str(e)
 
     return True, "\n".join(all_stdout), "\n".join(all_stderr)
