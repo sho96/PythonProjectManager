@@ -219,7 +219,7 @@ def _scan_pyenv() -> set:
     return paths
 
 
-def _get_python_version(python_exe: str) -> str:
+def _get_python_version(python_exe: str) -> str | None:
     """Get Python version from executable."""
     try:
         result = subprocess.run(
@@ -238,6 +238,10 @@ def _get_python_version(python_exe: str) -> str:
 
 def cmd_create(args):
     interpreter = args.interpreter
+    if not interpreter:
+        interpreter = interpreters_data.global_interpreter
+        if not interpreter and interpreters_data.interpreters:
+            interpreter = interpreters_data.interpreters[0]
     venv_dir = args.venv_dir
     dry_run = args.dry_run
     success = create_venv(interpreter, venv_dir, dry_run=dry_run)
