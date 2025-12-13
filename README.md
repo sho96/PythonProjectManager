@@ -1,4 +1,4 @@
-# PythonProjectManager (ppm)
+# pynstal
 
 A CLI utility to manage Python virtual environments with auto-detection of system Python installations.
 
@@ -15,13 +15,13 @@ A CLI utility to manage Python virtual environments with auto-detection of syste
 ### From PyPI
 
 ```bash
-pip install pythonprojectmanager
+pip install pynstal
 ```
 
-After installation, use the `ppm` command:
+After installation, use the `pynstal` command:
 
 ```bash
-ppm --help
+pynstal --help
 ```
 
 ### From source
@@ -38,59 +38,59 @@ pip install -e .
 
 ```bash
 # List found Python installations
-ppm interpreter detect
+pynstal interpreter detect
 
 # Interactively select which to add
-ppm interpreter detect --add
+pynstal interpreter detect --add
 
 # Add all detected interpreters
-ppm interpreter detect --add-all
+pynstal interpreter detect --add-all
 ```
 
 ### 2. Create a virtual environment
 
 ```bash
-ppm create-venv "C:\Users\...\python.exe" my_venv
+pynstal create-venv "C:\Users\...\python.exe" my_venv
 ```
 
 ### 3. Install packages using templates
 
 ```bash
 # List available templates
-ppm template list
+pynstal template list
 
 # Create venv with datascience template (numpy, scipy, pandas, etc.)
-ppm create-from-template datascience my_ds_venv
+pynstal create-from-template datascience my_ds_venv
 
 # Create venv with PyTorch (CUDA 12.4)
-ppm create-from-template pytorch-cu124 my_pytorch_venv
+pynstal create-from-template pytorch-cu124 my_pytorch_venv
 ```
 
 ### 4. Create custom templates
 
 ```bash
 # Simple template
-ppm template add mytemplate "numpy scipy matplotlib"
+pynstal template add mytemplate "numpy scipy matplotlib"
 
 # Template with special pip arguments
-ppm template add-complex pytorch-custom "torch torchvision" --args-str "--index-url https://download.pytorch.org/whl/cu124"
+pynstal template add-complex pytorch-custom "torch torchvision" --args-str "--index-url https://download.pytorch.org/whl/cu124"
 
 # Create venv from custom template
-ppm create-from-template pytorch-custom my_venv
+pynstal create-from-template pytorch-custom my_venv
 ```
 
 ## Commands
 
-- `ppm add-interpreter <path>` - Manually add a Python interpreter path
-- `ppm list` - List all configured interpreters
-- `ppm interpreter detect [--add | --add-all]` - Auto-detect system Python installations
-- `ppm create-venv <interpreter> <venv_dir> [--dry-run]` - Create a virtual environment
-- `ppm create-from-template <template> <venv_dir> [--interpreter <path>] [--dry-run]` - Create venv and install template packages
-- `ppm template list` - List all templates
-- `ppm template show <name>` - Show template details
-- `ppm template add <name> "<packages>"` - Add a simple template
-- `ppm template add-complex <name> "<packages>" --args-str "<args>"` - Add template with pip arguments
-- `ppm template remove <name>` - Remove a template
+- `pynstal add-interpreter <path>` - Manually add a Python interpreter path
+- `pynstal list` - List all configured interpreters
+- `pynstal interpreter detect [--add | --add-all]` - Auto-detect system Python installations
+- `pynstal create-venv <interpreter> <venv_dir> [--dry-run]` - Create a virtual environment
+- `pynstal create-from-template <template> <venv_dir> [--interpreter <path>] [--dry-run]` - Create venv and install template packages
+- `pynstal template list` - List all templates
+- `pynstal template show <name>` - Show template details
+- `pynstal template add <name> "<packages>"` - Add a simple template
+- `pynstal template add-complex <name> "<packages>" --args-str "<args>"` - Add template with pip arguments
+- `pynstal template remove <name>` - Remove a template
 
 ## Data Storage
 
