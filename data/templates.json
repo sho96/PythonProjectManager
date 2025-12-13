@@ -1,0 +1,54 @@
+{
+    "templates": {
+        "datascience": [
+            "numpy",
+            "pandas",
+            "ipykernel",
+            "matplotlib",
+            "tqdm"
+        ],
+        "web": [
+            "flask",
+            "gunicorn"
+        ],
+        "pytorch": [
+            {
+                "packages": [
+                    "torch",
+                    "torchvision"
+                ],
+                "args": [
+                    "--index-url",
+                    "https://download.pytorch.org/whl/cu130"
+                ]
+            }
+        ],
+        "pytorch-cu121": {
+            "packages": [
+                "torch",
+                "torchvision"
+            ],
+            "args": []
+        },
+        "jax": {
+            "packages": [
+                "jax"
+            ],
+            "args": [
+                "--index-url",
+                "https://storage.googleapis.com/jax-releases/jax_cuda_releases.html"
+            ]
+        },
+        "pytorch-cu124": {
+            "packages": [
+                "torch",
+                "torchvision",
+                "torchaudio"
+            ],
+            "args": [
+                "--index-url",
+                "https://download.pytorch.org/whl/cu124"
+            ]
+        }
+    }
+}
