@@ -460,7 +460,7 @@ def cmd_interpreter_detect(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="pythonprojectmanager")
+    parser = argparse.ArgumentParser(prog="pynstal")
     sub = parser.add_subparsers(dest="cmd")
 
     a_add = sub.add_parser("add-interpreter", help="Add interpreter path to data/interpreters.json")
