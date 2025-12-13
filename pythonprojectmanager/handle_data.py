@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 import json
 import os
+import sys
 
-DATA_DIR = "data/"
+DATA_DIR = ".pynstal/"
 
 @dataclass
 class InterpretersData:
@@ -32,5 +33,22 @@ class InterpretersData:
         else:
             self.interpreters = None
             self.global_interpreter = None
+
+        # If no global interpreter configured, default to current Python executable
+        try:
+            current = sys.executable
+            if not self.global_interpreter and current and os.path.isfile(current):
+                # ensure interpreters list exists and contains the current executable
+                if self.interpreters is None:
+                    self.interpreters = [current]
+                else:
+                    if current not in self.interpreters:
+                        self.interpreters.insert(0, current)
+                self.global_interpreter = current
+                # persist the change
+                self.save()
+        except Exception:
+            # avoid failing import/initialization on unexpected environments
+            pass
 
 interpreters_data = InterpretersData("interpreters.json")

@@ -8,7 +8,7 @@ A CLI utility to manage Python virtual environments with auto-detection of syste
 - **Manage interpreters** - add, list, and configure Python interpreter paths
 - **Create virtual environments** using any configured Python interpreter
 - **Install templates** - predefined and custom package templates with special pip arguments (e.g., CUDA-specific PyTorch)
-- **Persistent configuration** - interpreter paths and templates stored in `data/interpreters.json` and `data/templates.json`
+- **Persistent configuration** - interpreter paths and templates stored in `.pynstal/interpreters.json` and `.pynstal/templates.json`
 
 ## Installation
 
@@ -94,8 +94,8 @@ pynstal create-from-template pytorch-custom my_venv
 
 ## Data Storage
 
-- **Interpreters**: `data/interpreters.json` - stores configured Python interpreter paths
-- **Templates**: `data/templates.json` - stores user-defined package installation templates
+- **Interpreters**: `.pynstal/interpreters.json` - stores configured Python interpreter paths
+- **Templates**: `.pynstal/templates.json` - stores user-defined package installation templates
 
 ## Configuration
 

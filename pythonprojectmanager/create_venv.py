@@ -26,7 +26,7 @@ def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
 
 def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
     if interpreters_data.interpreters is None:
-        print("Warning: no interpreters configured in data; proceeding with provided interpreter.")
+        print("Warning: no interpreters configured in .pynstal; proceeding with provided interpreter.")
 
     success, stdout, stderr = _create_venv(interpreter_path, venv_dir, dry_run=dry_run)
     if success:
@@ -34,6 +34,29 @@ def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
             print(stdout)
             return True
         print(f"Virtual environment created successfully at {venv_dir}.")
+
+        # Configure the newly-created venv as the project's global interpreter
+        try:
+            if sys.platform.startswith("win"):
+                venv_python = os.path.join(venv_dir, "Scripts", "python.exe")
+            else:
+                venv_python = os.path.join(venv_dir, "bin", "python")
+
+            venv_python = os.path.abspath(venv_python)
+            if os.path.exists(venv_python):
+                # ensure interpreters list exists and contains venv python
+                if interpreters_data.interpreters is None:
+                    interpreters_data.interpreters = [venv_python]
+                else:
+                    if venv_python not in interpreters_data.interpreters:
+                        interpreters_data.interpreters.insert(0, venv_python)
+
+                interpreters_data.global_interpreter = venv_python
+                interpreters_data.save()
+                print(f"Configured project global interpreter: {venv_python}")
+        except Exception:
+            pass
+
         return True
     else:
         print(f"Failed to create virtual environment. Error:\n{stderr}")

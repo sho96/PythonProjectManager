@@ -15,7 +15,7 @@ def cmd_add_interpreter(args):
     if interpreters_data.interpreters is None:
         interpreters_data.interpreters = []
     if path in interpreters_data.interpreters:
-        print("Interpreter already exists in data.")
+        print("Interpreter already exists in .pynstal.")
         return
     interpreters_data.interpreters.append(path)
     interpreters_data.save()
@@ -34,8 +34,8 @@ def cmd_list(args):
 
 
 def load_templates():
-    # prefer project data/templates.json if present, fall back to bundled resource
-    tpl_path = os.path.join("data", "templates.json")
+    # prefer project .pynstal/templates.json if present, fall back to bundled resource
+    tpl_path = os.path.join(".pynstal", "templates.json")
     if os.path.exists(tpl_path):
         with open(tpl_path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -48,9 +48,9 @@ def load_templates():
 
 
 def save_templates(data):
-    """Persist templates to data/templates.json."""
-    tpl_path = os.path.join("data", "templates.json")
-    os.makedirs("data", exist_ok=True)
+    """Persist templates to .pynstal/templates.json."""
+    tpl_path = os.path.join(".pynstal", "templates.json")
+    os.makedirs(".pynstal", exist_ok=True)
     with open(tpl_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
@@ -265,7 +265,7 @@ def cmd_create_from_template(args):
             interpreter = interpreters_data.interpreters[0]
 
     if not interpreter:
-        print("No interpreter specified and no interpreter configured in data.")
+        print("No interpreter specified and no interpreter configured in .pynstal.")
         return 2
 
     # create venv
@@ -416,7 +416,7 @@ def cmd_interpreter_detect(args):
                 interpreters_data.interpreters.append(item['path'])
                 added_count += 1
         interpreters_data.save()
-        print(f"\nAdded {added_count} interpreter(s) to data/interpreters.json")
+        print(f"\nAdded {added_count} interpreter(s) to .pynstal/interpreters.json")
         return 0
     
     elif args.add:
@@ -444,7 +444,7 @@ def cmd_interpreter_detect(args):
                         print(f"  Added: {path}")
             
             interpreters_data.save()
-            print(f"\nAdded {added_count} interpreter(s) to data/interpreters.json")
+            print(f"\nAdded {added_count} interpreter(s) to .pynstal/interpreters.json")
             return 0
         except (ValueError, IndexError) as e:
             print(f"Invalid input: {e}")
