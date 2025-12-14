@@ -4,7 +4,7 @@ import os
 import json
 import importlib.resources as pkg_resources
 import subprocess
-from pathlib import Path
+import shutil
 import colorama
 from colorama import Fore, Style
 
@@ -15,6 +15,51 @@ def cprint(msg: str, color: str = Fore.WHITE) -> None:
 
 from .create_venv import create_venv, install_packages_in_venv, install_packages
 from .handle_data import interpreters_data
+
+
+def choose_interpreter(interpreter_arg: str | None) -> str | None:
+    """Return interpreter path to use.
+
+    If interpreter_arg is provided, return it. Otherwise prompt the user to choose
+    from configured interpreters. Pressing Enter chooses the default interpreter.
+    Returns None if no interpreter could be determined.
+    """
+    if interpreter_arg:
+        return interpreter_arg
+
+    # Prefer configured default
+    default = interpreters_data.default_interpreter
+    interpreters = interpreters_data.interpreters or []
+
+    if not interpreters and not default:
+        return None
+
+    print("Select interpreter to use for venv creation:")
+    for idx, p in enumerate(interpreters, 1):
+        marker = "(default)" if p == default else ""
+        print(f"  [{idx}] {p} {marker}")
+    if default and default not in interpreters:
+        print(f"  [D] {default} (default)")
+
+    print("Press Enter to use the default interpreter.")
+    print("Or enter the number of the interpreter to use:")
+    choice = input("> ").strip()
+    if not choice:
+        return default
+
+    # allow 'D' to choose explicit default path
+    if choice.upper() == "D" and default:
+        return default
+
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(interpreters):
+            return interpreters[idx]
+    except Exception:
+        pass
+
+    print("Invalid selection.")
+    return None
 
 
 def cmd_add_interpreter(args):
@@ -260,14 +305,13 @@ def _get_python_version(python_exe: str) -> str | None:
 
 
 def cmd_create(args):
-    interpreter = args.interpreter
+    interpreter = choose_interpreter(args.interpreter)
     if not interpreter:
-        interpreter = interpreters_data.default_interpreter
-        if not interpreter and interpreters_data.interpreters:
-            interpreter = interpreters_data.interpreters[0]
+        cprint("No interpreter selected; aborting.", Fore.RED)
+        return 2
     venv_dir = args.venv_dir
     dry_run = args.dry_run
-    success = create_venv(interpreter, venv_dir, dry_run=dry_run)
+    success = create_venv(interpreter, venv_dir, dry_run=dry_run) #type: ignore
     sys.exit(0 if success else 1)
 
 
@@ -285,14 +329,10 @@ def cmd_create_from_template(args):
 
     packages = templates[template]
 
-    # determine interpreter to use
+    # determine interpreter to use (may prompt)
+    interpreter = choose_interpreter(interpreter)
     if not interpreter:
-        interpreter = interpreters_data.default_interpreter
-        if not interpreter and interpreters_data.interpreters:
-            interpreter = interpreters_data.interpreters[0]
-
-    if not interpreter:
-        cprint("No interpreter specified and no interpreter configured in .pynstal.", Fore.RED)
+        cprint("No interpreter selected; aborting.", Fore.RED)
         return 2
 
     # create venv
@@ -416,6 +456,51 @@ def cmd_template_show(args):
                 print(f"  {pkg}")
             elif isinstance(pkg, dict):
                 print(f"  {json.dumps(pkg, indent=4)}")
+    return 0
+
+
+def cmd_remove_venv(args):
+    venv_dir = args.venv_dir
+    if not os.path.exists(venv_dir):
+        cprint(f"Virtual environment directory not found: {venv_dir}", Fore.YELLOW)
+        return 2
+
+    cprint(f"About to remove virtual environment: {venv_dir}", Fore.CYAN)
+    cprint("This will delete the directory and may update configured interpreters.", Fore.CYAN)
+    confirm = input("Type 'yes' to confirm: ").strip().lower()
+    if confirm != 'yes':
+        print("Aborted.")
+        return 1
+
+    try:
+        shutil.rmtree(venv_dir)
+    except Exception as e:
+        cprint(f"Failed to remove venv: {e}", Fore.RED)
+        return 1
+
+    # remove any interpreter entries that point into this venv
+    try:
+        if interpreters_data.interpreters:
+            new_list = []
+            removed = 0
+            for p in interpreters_data.interpreters:
+                if os.path.abspath(p).startswith(os.path.abspath(venv_dir)):
+                    removed += 1
+                else:
+                    new_list.append(p)
+            interpreters_data.interpreters = new_list
+
+            # Update default_interpreter if it pointed to removed venv
+            if interpreters_data.default_interpreter and os.path.abspath(interpreters_data.default_interpreter).startswith(os.path.abspath(venv_dir)):
+                interpreters_data.default_interpreter = interpreters_data.interpreters[0] if interpreters_data.interpreters else None
+            interpreters_data.save()
+            cprint(f"Removed venv and {removed} interpreter entry(ies) referencing it.", Fore.GREEN)
+        else:
+            cprint("Removed venv.", Fore.GREEN)
+    except Exception:
+        # ignore save errors but report success of deletion
+        cprint("Removed venv (failed to update interpreters).", Fore.YELLOW)
+
     return 0
 
 
@@ -544,6 +629,10 @@ def main(argv=None):
     a_create.add_argument("--interpreter", help="Interpreter path to use")
     a_create.add_argument("--dry-run", action="store_true", help="Do not actually run venv creation; show command")
     a_create.set_defaults(func=cmd_create)
+
+    a_remove = sub.add_parser("remove-venv", help="Remove a virtualenv directory and update configured interpreters")
+    a_remove.add_argument("venv_dir", help="Virtualenv directory to remove")
+    a_remove.set_defaults(func=cmd_remove_venv)
 
     a_tpl = sub.add_parser("create-from-template", help="Create venv and install packages from a named template")
     a_tpl.add_argument("template", help="Template name (see bundled templates.json)")
