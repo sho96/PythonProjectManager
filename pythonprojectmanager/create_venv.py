@@ -10,7 +10,7 @@ colorama.init(autoreset=True)
 def cprint(msg: str, color: str = Fore.WHITE) -> None:
     print(f"{color}{msg}{Style.RESET_ALL}")
 
-def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
+def _create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False) -> tuple[bool, str, str]:
     abs_interpreter = os.path.abspath(interpreter_path)
     abs_venv = os.path.abspath(venv_dir)
     cmd = [abs_interpreter, "-m", "venv", abs_venv]
@@ -27,9 +27,10 @@ def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
         stderr=subprocess.STDOUT,
         shell=False,
         universal_newlines=True,
+        bufsize=1,  # Line buffered
     )
 
-    out_lines = []
+    out_lines: list[str] = []
     try:
         if process.stdout:
             for line in iter(process.stdout.readline, ''):
@@ -38,6 +39,7 @@ def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
                 line = line.rstrip('\n')
                 out_lines.append(line)
                 print(line)
+                sys.stdout.flush()  # Ensure immediate display
             process.stdout.close()
         returncode = process.wait()
         stdout = "\n".join(out_lines)
@@ -50,7 +52,7 @@ def _create_venv(interpreter_path, venv_dir, dry_run: bool = False):
         return False, "", str(e)
 
 
-def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
+def create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False):
     if interpreters_data.interpreters is None:
         print("Warning: no interpreters configured in .pynstal; proceeding with provided interpreter.")
 
@@ -89,7 +91,7 @@ def create_venv(interpreter_path, venv_dir, dry_run: bool = False):
         return False
 
 
-def install_packages_in_venv(venv_dir: str, packages: list, dry_run: bool = False):
+def install_packages_in_venv(venv_dir: str, packages: list[str | dict[str, list[str]]], dry_run: bool = False):
     """Install packages into the venv's Python using pip.
 
     Each entry in `packages` may be either:
@@ -105,7 +107,7 @@ def install_packages_in_venv(venv_dir: str, packages: list, dry_run: bool = Fals
 
     return install_packages(py_exe, packages, dry_run=dry_run)
    
-def install_packages(interpreter: str, packages: list, dry_run: bool = False):
+def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]], dry_run: bool = False):
     """Install packages using the specified interpreter's pip.
 
     Each entry in `packages` may be either:
@@ -116,14 +118,14 @@ def install_packages(interpreter: str, packages: list, dry_run: bool = False):
     """
     abs_interpreter = os.path.abspath(interpreter)
 
-    all_stdout = []
-    all_stderr = []
+    all_stdout: list[str] = []
+    all_stderr: list[str] = []
 
     for entry in packages:
         if isinstance(entry, str):
             pkg_list = [entry]
             extra_args = []
-        elif isinstance(entry, dict):
+        elif isinstance(entry, dict): # type: ignore
             pkg_list = entry.get("packages") or entry.get("package") or []
             if isinstance(pkg_list, str):
                 pkg_list = [pkg_list]
@@ -147,9 +149,10 @@ def install_packages(interpreter: str, packages: list, dry_run: bool = False):
             stderr=subprocess.STDOUT,
             shell=False,
             universal_newlines=True,
+            bufsize=1,  # Line buffered
         )
 
-        pkg_out = []
+        pkg_out: list[str] = []
         try:
             if process.stdout:
                 for line in iter(process.stdout.readline, ''):
@@ -158,6 +161,7 @@ def install_packages(interpreter: str, packages: list, dry_run: bool = False):
                     line = line.rstrip('\n')
                     pkg_out.append(line)
                     print(line)
+                    sys.stdout.flush()  # Ensure immediate display
                 process.stdout.close()
             rc = process.wait()
             all_stdout.append("\n".join(pkg_out))

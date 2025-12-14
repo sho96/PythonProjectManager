@@ -1,7 +1,9 @@
 {
     "FILE_PATH": "interpreters.json",
     "interpreters": [
+        "/Users/sho96/Desktop/pythonFiles/PythonProjectManager/.venv/bin/python",
+        "/Users/sho96/.pyenv/versions/3.12.11/bin/python3.12",
         "C:\\Users\\kurok\\.pyenv\\pyenv-win\\versions\\3.12.10\\python.exe"
     ],
-    "global_interpreter": "C:\\Users\\kurok\\.pyenv\\pyenv-win\\versions\\3.12.10\\python.exe"
+    "default_interpreter": "/Users/sho96/Desktop/pythonFiles/PythonProjectManager/.venv/bin/python"
 }
