@@ -34,7 +34,7 @@ def _create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False) ->
     try:
         if process.stdout:
             for line in iter(process.stdout.readline, ''):
-                if line is None:
+                if line is None: # type: ignore
                     break
                 line = line.rstrip('\n')
                 out_lines.append(line)
@@ -156,7 +156,7 @@ def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]
         try:
             if process.stdout:
                 for line in iter(process.stdout.readline, ''):
-                    if line is None:
+                    if line is None: # type: ignore
                         break
                     line = line.rstrip('\n')
                     pkg_out.append(line)
