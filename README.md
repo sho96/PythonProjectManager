@@ -69,13 +69,14 @@ pynstal create-from-template pytorch-cu124 my_pytorch_venv
 ### 4. Create custom templates
 
 ```bash
-# Simple template
-pynstal template add mytemplate "numpy scipy matplotlib"
-
-# Add packages with custom pip args to an existing template
+# Create a template (interactive)
+pynstal template add mytemplate
+# then add packages
+pynstal template add-pkg mytemplate numpy scipy matplotlib
+# or add packages with custom pip args
 pynstal template add-pkg-complex mytemplate torch torchvision --args-str "--index-url https://download.pytorch.org/whl/cu124"
 
-# Create venv from custom template
+# Create venv from the custom template
 pynstal create-from-template mytemplate my_venv
 ```
 
@@ -89,12 +90,12 @@ pynstal create-from-template mytemplate my_venv
   - `pynstal add-interpreter <path>` - Manually add a Python interpreter path (positional)
   - `pynstal set-default-interpreter` - Interactive prompt to choose the global default interpreter
 
-- `pynstal create-venv <interpreter> <venv_dir> [--dry-run]` - Create a virtual environment
+- `pynstal create-venv <venv_dir> [--interpreter <path>] [--dry-run]` - Create a virtual environment
 - `pynstal create-from-template <template> <venv_dir> [--interpreter <path>] [--dry-run]` - Create venv and install template packages
 - `pynstal remove-venv <venv_dir>` - Delete a virtual environment and clean up references
 - `pynstal template list` - List all templates
 - `pynstal template show <name>` - Show template details
-- `pynstal template add <name> "<packages>"` - Add a simple template
+- `pynstal template add <name>` - Add a new template interactively
 - `pynstal template add-pkg <name> <packages...>` - Add packages to an existing template
 - `pynstal template add-pkg-complex <name> <packages...> --args-str "<args>"` - Add packages with pip args to a template
 - `pynstal template remove-pkg <name>` - Interactively remove packages from a template
