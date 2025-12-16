@@ -5,10 +5,11 @@ A CLI utility to manage Python virtual environments with auto-detection of syste
 ## Features
 
 - **Auto-detect Python installations** across Windows, macOS, and Linux (pyenv, conda, system Python)
-- **Manage interpreters** - add, list, and configure Python interpreter paths
+- **Manage interpreters** - add/list/remove and set defaults
+- **Project-aware defaults** - per-project `pynstal.json` plus global config under `~/.pynstal`
 - **Create virtual environments** using any configured Python interpreter
-- **Install templates** - predefined and custom package templates with special pip arguments (e.g., CUDA-specific PyTorch)
-- **Persistent configuration** - interpreter paths and templates stored in `.pynstal/interpreters.json` and `.pynstal/templates.json`
+- **Install templates** - predefined and custom package templates (including pip args like CUDA wheels)
+- **Persistent configuration** - interpreter paths and templates stored in global config, with optional project-local defaults
 
 ## Installation
 
@@ -47,13 +48,23 @@ pynstal interpreter detect --add
 pynstal interpreter detect --add-all
 ```
 
-### 2. Create a virtual environment
+### 2. Set a default interpreter (optional)
 
 ```bash
-pynstal create-venv "C:\Users\...\python.exe" my_venv
+pynstal set-default-interpreter   # prompts to choose from the configured list
 ```
 
-### 3. Install packages using templates
+### 3. Create a virtual environment
+
+```bash
+# Uses project-local default (pynstal.json) or global default if not provided
+pynstal create-venv my_venv
+
+# Or specify an interpreter explicitly
+pynstal create-venv my_venv --interpreter "/usr/bin/python3.12"
+```
+
+### 4. Install packages using templates
 
 ```bash
 # List available templates
@@ -66,7 +77,7 @@ pynstal create-from-template datascience my_ds_venv
 pynstal create-from-template pytorch-cu124 my_pytorch_venv
 ```
 
-### 4. Create custom templates
+### 5. Create custom templates
 
 ```bash
 # Create a template (interactive)
@@ -93,48 +104,24 @@ pynstal create-from-template mytemplate my_venv
 - `pynstal create-venv <venv_dir> [--interpreter <path>] [--dry-run]` - Create a virtual environment
 - `pynstal create-from-template <template> <venv_dir> [--interpreter <path>] [--dry-run]` - Create venv and install template packages
 - `pynstal remove-venv <venv_dir>` - Delete a virtual environment and clean up references
-- `pynstal template list` - List all templates
-- `pynstal template show <name>` - Show template details
-- `pynstal template add <name>` - Add a new template interactively
-- `pynstal template add-pkg <name> <packages...>` - Add packages to an existing template
-- `pynstal template add-pkg-complex <name> <packages...> --args-str "<args>"` - Add packages with pip args to a template
-- `pynstal template remove-pkg <name>` - Interactively remove packages from a template
-- `pynstal template remove <name>` - Remove a template
 - `pynstal install <template> [--interpreter <path>] [--dry-run]` - Install packages from a template into an interpreter without creating a venv
+
+- Template management
+  - `pynstal template list` - List all templates
+  - `pynstal template show <name>` - Show template details
+  - `pynstal template add <name>` - Add a new template interactively
+  - `pynstal template add-pkg <name> <packages...>` - Add packages to an existing template
+  - `pynstal template add-pkg-complex <name> <packages...> --args-str "<args>"` - Add packages with pip args to a template
+  - `pynstal template remove-pkg <name>` - Interactively remove packages from a template
+  - `pynstal template remove <name>` - Remove a template
 
 ## Data Storage
 
-- **Interpreters**: `.pynstal/interpreters.json` - stores configured Python interpreter paths
-- **Templates**: `.pynstal/templates.json` - stores user-defined package installation templates
-
-## Configuration
-
-### interpreters.json
-
-```json
-{
-    "FILE_PATH": "interpreters.json",
-    "interpreters": [
-        "C:\\Users\\...\\python.exe",
-        "/usr/bin/python3.12"
-    ],
-    "global_interpreter": null
-}
-```
-
-### templates.json
-
-```json
-{
-    "templates": {
-        "simple": ["numpy", "scipy"],
-        "pytorch-cu124": {
-            "packages": ["torch", "torchvision"],
-            "args": ["--index-url", "https://download.pytorch.org/whl/cu124"]
-        }
-    }
-}
-```
+- **Global config**: `~/.pynstal` (or `$XDG_CONFIG_HOME/pynstal`)
+  - `interpreters.json` – configured interpreter paths and `default_interpreter`
+  - `templates.json` – user-defined package templates
+- **Project-local config**: `./pynstal.json`
+  - `default_interpreter` – default interpreter for the current project (set automatically when creating a venv)
 
 ## Platform Support
 
