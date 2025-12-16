@@ -72,25 +72,34 @@ pynstal create-from-template pytorch-cu124 my_pytorch_venv
 # Simple template
 pynstal template add mytemplate "numpy scipy matplotlib"
 
-# Template with special pip arguments
-pynstal template add-complex pytorch-custom "torch torchvision" --args-str "--index-url https://download.pytorch.org/whl/cu124"
+# Add packages with custom pip args to an existing template
+pynstal template add-pkg-complex mytemplate torch torchvision --args-str "--index-url https://download.pytorch.org/whl/cu124"
 
 # Create venv from custom template
-pynstal create-from-template pytorch-custom my_venv
+pynstal create-from-template mytemplate my_venv
 ```
 
 ## Commands
 
-- `pynstal add-interpreter <path>` - Manually add a Python interpreter path
-- `pynstal list` - List all configured interpreters
-- `pynstal interpreter detect [--add | --add-all]` - Auto-detect system Python installations
+- Interpreter management
+  - `pynstal interpreter list` - List configured interpreters
+  - `pynstal interpreter detect [--add | --add-all]` - Auto-detect system Python installations
+  - `pynstal interpreter add` - Interactive prompt to add interpreter paths
+  - `pynstal interpreter remove` - Interactive prompt to remove interpreter paths
+  - `pynstal add-interpreter <path>` - Manually add a Python interpreter path (positional)
+  - `pynstal set-default-interpreter` - Interactive prompt to choose the global default interpreter
+
 - `pynstal create-venv <interpreter> <venv_dir> [--dry-run]` - Create a virtual environment
 - `pynstal create-from-template <template> <venv_dir> [--interpreter <path>] [--dry-run]` - Create venv and install template packages
+- `pynstal remove-venv <venv_dir>` - Delete a virtual environment and clean up references
 - `pynstal template list` - List all templates
 - `pynstal template show <name>` - Show template details
 - `pynstal template add <name> "<packages>"` - Add a simple template
-- `pynstal template add-complex <name> "<packages>" --args-str "<args>"` - Add template with pip arguments
+- `pynstal template add-pkg <name> <packages...>` - Add packages to an existing template
+- `pynstal template add-pkg-complex <name> <packages...> --args-str "<args>"` - Add packages with pip args to a template
+- `pynstal template remove-pkg <name>` - Interactively remove packages from a template
 - `pynstal template remove <name>` - Remove a template
+- `pynstal install <template> [--interpreter <path>] [--dry-run]` - Install packages from a template into an interpreter without creating a venv
 
 ## Data Storage
 
