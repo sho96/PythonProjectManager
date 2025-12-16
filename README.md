@@ -109,7 +109,7 @@ pynstal create-from-template mytemplate my_venv
 - Template management
   - `pynstal template list` - List all templates
   - `pynstal template show <name>` - Show template details
-  - `pynstal template add <name>` - Add a new template interactively
+  - `pynstal template create <name>` - Create a new template interactively
   - `pynstal template add-pkg <name> <packages...>` - Add packages to an existing template
   - `pynstal template add-pkg-complex <name> <packages...> --args-str "<args>"` - Add packages with pip args to a template
   - `pynstal template remove-pkg <name>` - Interactively remove packages from a template

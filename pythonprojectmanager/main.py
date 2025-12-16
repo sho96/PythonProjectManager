@@ -479,7 +479,7 @@ def cmd_template_list(args):
     return 0
 
 
-def cmd_template_add(args):
+def cmd_template_create(args):
     name = args.name
 
     data = load_templates()
@@ -914,9 +914,9 @@ def main(argv=None):
     tm_list = tm_sub.add_parser("list", help="List all templates")
     tm_list.set_defaults(func=cmd_template_list)
 
-    tm_add = tm_sub.add_parser("add", help="Add a new template interactively")
+    tm_add = tm_sub.add_parser("create", help="Create a new template interactively")
     tm_add.add_argument("name", help="Template name")
-    tm_add.set_defaults(func=cmd_template_add)
+    tm_add.set_defaults(func=cmd_template_create)
 
     tm_remove = tm_sub.add_parser("remove", help="Remove a template")
     tm_remove.add_argument("name", help="Template name")
