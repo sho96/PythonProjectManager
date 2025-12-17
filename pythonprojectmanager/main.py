@@ -260,9 +260,9 @@ def _get_python_version(python_exe: str) -> str | None:
 
 
 def cmd_create(args):
-    interpreter = args.interpreter
+    interpreter: str = args.interpreter
     if not interpreter:
-        interpreter = interpreters_data.default_interpreter
+        interpreter = interpreters_data.default_interpreter # type: ignore
         if not interpreter and interpreters_data.interpreters:
             interpreter = interpreters_data.interpreters[0]
     venv_dir = args.venv_dir
