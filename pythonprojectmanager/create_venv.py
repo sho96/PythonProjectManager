@@ -1,4 +1,7 @@
-from .handle_data import interpreters_data
+from .handle_data import (
+    interpreters_data,
+    set_project_default_interpreter,
+)
 import os
 import subprocess
 import sys
@@ -52,7 +55,7 @@ def _create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False) ->
         return False, "", str(e)
 
 
-def create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False):
+def create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False, offer_activation: bool = True):
     if interpreters_data.interpreters is None:
         print("Warning: no interpreters configured in .pynstal; proceeding with provided interpreter.")
 
@@ -79,9 +82,46 @@ def create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False):
                     if venv_python not in interpreters_data.interpreters:
                         interpreters_data.interpreters.insert(0, venv_python)
 
-                interpreters_data.default_interpreter = venv_python
                 interpreters_data.save()
-                cprint(f"Configured project default interpreter: {venv_python}", Fore.GREEN)
+
+                # Set project-local default interpreter without touching global interpreters.json default
+                try:
+                    set_project_default_interpreter(venv_python)
+                    cprint(f"Configured project default interpreter for {os.getcwd()}: {venv_python}", Fore.GREEN)
+                except Exception as e:
+                    cprint(f"Could not update project default interpreter: {e}", Fore.YELLOW)
+                # Install pynstal into the newly-created venv.
+                try:
+                    # Decide whether to install local editable project (if running from a repo)
+                    repo_cwd = os.getcwd()
+                    use_editable = False
+                    if os.path.exists(os.path.join(repo_cwd, "pyproject.toml")) or os.path.exists(os.path.join(repo_cwd, "setup.cfg")):
+                        use_editable = True
+
+                    if use_editable:
+                        install_cmd = [venv_python, "-m", "pip", "install", "-e", repo_cwd]
+                    else:
+                        install_cmd = [venv_python, "-m", "pip", "install", "pynstal"]
+
+                    cprint(f"Installing pynstal into venv: {' '.join(install_cmd)}", Fore.CYAN)
+                    proc = subprocess.Popen(install_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=1)
+                    if proc.stdout:
+                        for line in iter(proc.stdout.readline, ''):
+                            if line is None:
+                                break
+                            print(line.rstrip('\n'))
+                            sys.stdout.flush()
+                        proc.stdout.close()
+                    rc = proc.wait()
+                    if rc != 0:
+                        cprint("Failed to install pynstal into venv.", Fore.YELLOW)
+                    else:
+                        cprint("Installed pynstal into venv.", Fore.GREEN)
+                except Exception as e:
+                    cprint(f"Error installing pynstal into venv: {e}", Fore.YELLOW)
+
+                if offer_activation:
+                    offer_activation_shell(venv_dir)
         except Exception:
             pass
 
@@ -91,7 +131,7 @@ def create_venv(interpreter_path: str, venv_dir: str, dry_run: bool = False):
         return False
 
 
-def install_packages_in_venv(venv_dir: str, packages: list[str | dict[str, list[str]]], dry_run: bool = False):
+def install_packages_in_venv(venv_dir: str, packages, dry_run: bool = False):
     """Install packages into the venv's Python using pip.
 
     Each entry in `packages` may be either:
@@ -107,7 +147,7 @@ def install_packages_in_venv(venv_dir: str, packages: list[str | dict[str, list[
 
     return install_packages(py_exe, packages, dry_run=dry_run)
    
-def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]], dry_run: bool = False):
+def install_packages(interpreter: str, packages, dry_run: bool = False):
     """Install packages using the specified interpreter's pip.
 
     Each entry in `packages` may be either:
@@ -121,7 +161,13 @@ def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]
     all_stdout: list[str] = []
     all_stderr: list[str] = []
 
-    for entry in packages:
+    # Normalize allowed package specs: list[str|dict], dict, or str
+    if isinstance(packages, (str, dict)):
+        iterable = [packages]
+    else:
+        iterable = packages or []
+
+    for entry in iterable:
         if isinstance(entry, str):
             pkg_list = [entry]
             extra_args = []
@@ -142,7 +188,7 @@ def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]
         if not os.path.exists(abs_interpreter):
             return False, "", f"Interpreter executable not found: {abs_interpreter}"
 
-        print(f"Running command: {' '.join(cmd)}")
+        cprint(f"Running command: {' '.join(cmd)}", Fore.CYAN)
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -176,3 +222,23 @@ def install_packages(interpreter: str, packages: list[str | dict[str, list[str]]
             return False, "\n".join(all_stdout), str(e)
 
     return True, "\n".join(all_stdout), "\n".join(all_stderr)
+
+
+def offer_activation_shell(venv_dir: str) -> None:
+    """Prompt to open a subshell with the venv activated."""
+    try:
+        activate_now = input("Activate venv now in a subshell? [y/N]: ").strip().lower()
+        if activate_now == 'y':
+            if sys.platform.startswith('win'):
+                cprint("On Windows: to activate, run: <venv_dir>\\Scripts\\activate.bat in your shell.", Fore.CYAN)
+            else:
+                shell = os.getenv('SHELL', '/bin/bash')
+                newenv = os.environ.copy()
+                venv_bin = os.path.join(os.path.abspath(venv_dir), 'bin')
+                newenv['VIRTUAL_ENV'] = os.path.abspath(venv_dir)
+                newenv['PATH'] = venv_bin + os.pathsep + newenv.get('PATH', '')
+                cprint(f"Launching interactive shell ({shell}) with venv activated. Exit to return.", Fore.CYAN)
+                subprocess.run([shell, '-i'], env=newenv)
+    except Exception:
+        # keep failures non-fatal so venv creation flow continues
+        pass

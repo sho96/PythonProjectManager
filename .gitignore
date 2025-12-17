@@ -103,7 +103,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.pynstal
+.pynstal/*
 
 # Spyder project settings
 .spyderproject
